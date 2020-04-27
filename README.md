@@ -1,1 +1,1 @@
-# visualAttendanceSystem
+# Distributed Visual Attendance System
