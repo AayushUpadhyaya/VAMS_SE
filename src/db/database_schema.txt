@@ -1,0 +1,47 @@
+--------------------------
+User:ayush
+password:1234
+--------------------------
+create table students(
+     roll_number int AUTO_INCREMENT,
+     full_name varchar(60),
+     creation_dt timestamp DEFAULT CURRENT_TIMESTAMP,
+     facial_features blob,
+     primary key(roll_number))ENGINE=InnoDB;
+
+----------------------------------------------------------------
+ create table courses(
+     course_id varchar(10) not null,
+     course_name varchar(45) not null,
+     primary key(course_id))ENGINE=InnoDB;
+-------------------------------------------------------
+create table course_reg(
+     course_id varchar(10) not null references courses(course_id),
+     roll_number int not null references students(roll_number),
+     semester_type varchar(10),
+     semester_year int,
+     primary key(course_id,roll_number,semester_type,semester_year))ENGINE=InnoDB;
+----------------------------------------------------------------------------
+
+create table attendance(
+     course_id varchar(10) not null references courses(course_id),
+     roll_number int not null references students(roll_number),
+     full_name varchar(60),
+     semester_year int,
+     semester_type varchar(10),
+     date_of_class date,
+     time_of_class time,
+     class_room varchar(10),
+     primary key (course_id,roll_number,semester_year,semester_type,date_of_class))ENGINE=InnoDB;
+--------------------------------------------------------------------------------------
+create table course_credentials(
+    course_id varchar(10) references courses(course_id),
+    passkey char(40) not null,
+    primary key (course_id)
+    )ENGINE=InnoDB;
+    --------------------------------------------------------------------------------------
+create table drowsy_data(
+course_id varchar(10) references courses(course_id),
+roll_number int references students(roll_number),
+date_of_class date,
+primary key (course_id,roll_number,date_of_class))ENGINE=InnoDB;
