@@ -1,79 +1,54 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Apr 18 11:59:29 2020
-
-@author: jeevesh
-"""
-
-
-'''
-Download : pip intall getkey
-'''
 from  camera import Webcam
 import mysql.connector
-from db.course_reg import Course_Reg
+from databaseHandlers.course_reg import Course_Reg
 from mysql.connector import Error
-from db.DBService import MyDatabase
+from databaseHandlers.DBService import MyDatabase
 import numpy as np
 import cv2
-from db.StudentLayer import Student
+from databaseHandlers.StudentLayer import Student
 from getkey import getkey, keys
 import os
 from keras.preprocessing.image import ImageDataGenerator, array_to_img, img_to_array, load_img
 
-#parent_dir = "/home/jeevesh/Desktop/SE/project/dataset/testingProject/"
-parent_dir = "../data/train/"
-
-
+parent_dir = "../data/StudentFacesTrain/"
 
 class  StudentRegistration:
-    
-   # def __init__(self):
-   
-   
-   
-   
-        
-        
-        
-    def takeStudentDetails(self,rollNumber):
-    
+
+    def takeStudentDetails(self,rollNumber,camera):
+
         firstName = input("Enter student First Name : or q to exit Registration " )
         if firstName == 'q':
             print("Registration Completed")
             exit()
-            
+
         lastName =  input("Enter student Last Name : ")
         fullName = firstName + " " + lastName
-        
+
         print("Entered Name is :")
         print(fullName)
-        
-        print("if Name is INcorrect and you want to re-enter the name press q/Q  ELSE press c/C to continue")
+
+        print("If the Name is Incorrect and you want to re-enter the name press q/Q  ELSE press c/C to continue")
         key = getkey()
         if key == 'q' or key =='Q':
             return -1
         if key == 'c' or key =='C':
             print("We need to capture your image")
-            print("press y/Y once you are ready")
+            print("Press y/Y once you are ready")
             key = getkey()
             if key == 'y' or key == 'Y':
                 frame = camera.takeStudentPhoto()
-                #frame = self.takeStudentPhoto()
                 self.createAugmentationAndSave(frame,rollNumber)
-                #self.saveImages(frame,rollNumber)
         studentDict={}
         studentDict={'name':fullName,'facial_features':b'89'}
-        return studentDict 
-        
-       
-        
+        return studentDict
+
+
+
     def createAugmentationAndSave(self,image,rollNumber):
         directory = str(rollNumber)
-        path = os.path.join(parent_dir, directory) 
+        path = os.path.join(parent_dir, directory)
         os.mkdir(path)
-        
+
         folder_location = path + "/"
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         datagen = ImageDataGenerator(
@@ -95,41 +70,34 @@ class  StudentRegistration:
             if photoCount > 9:
                 break  # otherwise the generator would loop indefinitely
 
-        
+
         return
-    
-    
-   
-#ss=Course_Reg(infodict)
-#ss.register_course()
-    
 
-    
-print("Registration Started")
-student = Student()
-camera = Webcam()
+def main():
+    print("Registration Started")
+    student = Student()
+    camera = Webcam()
 
-print("press q , for closing the Registration")
-while(True):
-    
-    studReg = StudentRegistration()
-    nextRollNumber=student.getNextRollNumber()
-    dataDict  = studReg.takeStudentDetails(nextRollNumber)
-    sObject=Student(dataDict)
-    sObject.createStudent()
-    
-    if 0xFF == ord('q'):
-        exit()
-    
-print("Registration Completed")
+    print("Press q , for closing the Registration")
+    while(True):
 
+        studReg = StudentRegistration()
+        nextRollNumber=student.getNextRollNumber()
+        dataDict  = studReg.takeStudentDetails(nextRollNumber, camera)
+        sObject=Student(dataDict)
+        sObject.createStudent()
 
+        if 0xFF == ord('q'):
+            exit()
 
+    print("Registration Completed")
 
+    '''
+    Following class : StudentRegistration deals with Registration of student at the time of admission.
+    takeStudentDetails  :  It take student details as input, if details are ok it calls to capture image of student
+    takeStudentPhoto   : it captures the student present in front of camera, this module present in camera.py
+    createAugmentationAndSave : it replicate different version of images and save in the path which is provided
+    '''
 
-'''
-Following class : StudentRegistration deals with Registration of student at the time of admission.
-takeStudentDetails  :  It take student details as input, if details are ok it calls to capture image of student
-takeStudentPhoto   : it captures the student present in front of camera, this module present in camera.py
-createAugmentationAndSave : it replicate different version of images and save in the path which is provided
-'''
+if __name__ == "__main__":
+    main()

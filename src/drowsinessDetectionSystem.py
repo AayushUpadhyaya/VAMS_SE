@@ -1,37 +1,22 @@
 import sys
 from termcolor import colored,cprint
-
 import stdiomask
-import functions
+import facialExtractionHelpers
 import numpy as np
 import cv2
-from PIL import Image
-from sklearn.metrics import accuracy_score
-from sklearn.preprocessing import Normalizer
-from sklearn.neighbors import KNeighborsClassifier
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from numpy import asarray
-from mtcnn.mtcnn import MTCNN
 from os.path import isdir
 from os import listdir
-from numpy import asarray
-from matplotlib import pyplot
-from mtcnn.mtcnn import MTCNN
 from numpy import load
-from numpy import expand_dims
-from numpy import asarray
-from numpy import savez_compressed
 from keras.models import load_model
 import pickle
 import mysql.connector
 from mysql.connector import Error
-from db.DBService import MyDatabase
-from db.CourseLoginLayer import CourseAuthenticator
-from db.AttendanceLayer import Attendance
-from db.StudentLayer import Student
-from db.course_reg import Course_Reg
-from db.SleepLogger import DrowsyDetector
+from databaseHandlers.DBService import MyDatabase
+from databaseHandlers.CourseLoginLayer import CourseAuthenticator
+from databaseHandlers.AttendanceLayer import Attendance
+from databaseHandlers.StudentLayer import Student
+from databaseHandlers.course_reg import Course_Reg
+from databaseHandlers.SleepLogger import DrowsyDetector
 import datetime
 from scipy.spatial import distance
 from imutils import face_utils
@@ -42,12 +27,12 @@ import dlib
 class detectDrowsiness:
 	def __init__(self,classRoom):
 		self.Model               =   None
-		self.kerasPath           =   "./model/facenet_keras.h5"
-		self.trainPath           =   "./model/train.pickle"
-		self.testPath            =   "./model/test.pickle"
-		self.trainLabelPath      =   "./model/train_labels.pickle"
-		self.testLabelPath       =   "./model/test_labels.pickle"
-		self.classifierPath      =    "./model/classifier.pickle"
+		self.kerasPath           =   "../model/facenet_keras.h5"
+		self.trainPath           =   "../model/train_data.pickle"
+		self.testPath            =   "../model/test_data.pickle"
+		self.trainLabelPath      =   "../model/train_labels.pickle"
+		self.testLabelPath       =   "../model/test_labels.pickle"
+		self.classifierPath      =    "../model/classifier.pickle"
 		self.trainingData         =    None
 		self.testingData          =    None
 		self.train_labels        =    None
@@ -90,7 +75,7 @@ class detectDrowsiness:
 		thresh = 0.25
 		frame_check = 30
 		detect = dlib.get_frontal_face_detector()
-		predict = dlib.shape_predictor("./model/shape_predictor_68_face_landmarks.dat")# Dat file is the crux of the code
+		predict = dlib.shape_predictor("../model/shape_predictor_68_face_landmarks.dat")# Dat file is the crux of the code
 
 		(lStart, lEnd) = face_utils.FACIAL_LANDMARKS_68_IDXS["left_eye"]
 		(rStart, rEnd) = face_utils.FACIAL_LANDMARKS_68_IDXS["right_eye"]
@@ -114,7 +99,6 @@ class detectDrowsiness:
 				#cv2.drawContours(frame, [rightEyeHull], -1, (0, 255, 0), 1)
 				if ear < thresh:
 					flag += 1
-					#print (flag)
 					if flag >= frame_check:
 						value = frame
 						cv2.putText(value, "****************ALERT!****************", (10, 30),
@@ -132,79 +116,77 @@ class detectDrowsiness:
 		DrowsyDetector().markStudentSleepy(list(map(int, self.sleeping_students.tolist())), courseID)
 		cv2.destroyAllWindows()
 		cap.stop()
-		#print(self.sleeping_students)
 
 	def retrieveRollNumber(self,frame,courseID):
 		frame = cv2.cvtColor( frame , cv2.COLOR_BGR2RGB )
-		face_array,x1_frame,y1_frame,x2_frame,y2_frame = functions.try_extract_face_webcam(frame)
+		face_array,x1_frame,y1_frame,x2_frame,y2_frame = facialExtractionHelpers.try_extract_face_webcam(frame)
 
 		if len(face_array) == 0:
-			print("No face Detected")
+			print("No Face Detected")
 		else:
 			for face in range(len(face_array)):
-				predict = functions.try_performTest(self.model,self.trainingData,face_array[face],self.classifier)
+				predict = facialExtractionHelpers.try_performTest(self.model,self.trainingData,face_array[face],self.classifier)
 
-				#print(predict)
 				if(len(predict)) == 0:
-					print(" face Not Recognized")
-					#pass
+					print(" Face Not Recognized")
 				else:
-					#print("HELLO?", predict)
 					self.sleeping_students = np.append(self.sleeping_students,predict)
-					#print("HELLO?", self.sleeping_students)
 					self.sleeping_students = np.unique(self.sleeping_students)
 
 
 
 	def loadModule(self):
 		self.model = load_model(self.kerasPath,compile=False)
-		print("model loaded")
+		print("Model loaded")
 
 		with open(self.trainPath, 'rb') as f:
 			self.trainingData = pickle.load(f)
-		print("trainingData loaded")
+		print("Training Data loaded")
 
 		with open(self.testPath, 'rb') as f:
 			self.testingData = pickle.load(f)
-		print("testingData loaded")
+		print("Testing Data loaded")
 
 		with open(self.trainLabelPath, 'rb') as f:
 			self.train_labels = pickle.load(f)
-		print("train_labels loaded")
+		print("Training labels loaded")
 
 		with open(self.testLabelPath, 'rb') as f:
 			self.test_labels = pickle.load(f)
-		print("test_labels loaded")
+		print("Testing labels loaded")
 
 		with open(self.classifierPath, 'rb') as f:
 			self.classifier = pickle.load(f)
-		print("classifier loaded")
+		print("Classifier loaded")
 
 		return True
 
 
-cprint("Drowsiness Detection System Initiated", 'green', attrs=['reverse', 'bold'])
-courseID   =    input("Enter Course ID : ")
-PassKey      = stdiomask.getpass(prompt='Enter pass key for user :', mask='*')
-#PassKey       =    input("Enter pass key for user : ")
-detectSleepObj  =    detectDrowsiness(input("Enter Class room : "))
+def main():
+	cprint("Drowsiness Detection System Initiated", 'green', attrs=['reverse', 'bold'])
+	courseID   =    input("Enter Course ID : ")
+	PassKey      = stdiomask.getpass(prompt='Enter pass key for user :', mask='*')
+	detectSleepObj  =    detectDrowsiness(input("Enter Class room : "))
 
-if (detectSleepObj.verifyCourseIDandPassKey(courseID,PassKey)):
+	if (detectSleepObj.verifyCourseIDandPassKey(courseID,PassKey)):
 
-	if (detectSleepObj.loadStudents(courseID)):
+		if (detectSleepObj.loadStudents(courseID)):
 
-		if(detectSleepObj.loadModule()):
+			if(detectSleepObj.loadModule()):
 
-			detectSleepObj.checkDrowsiness(courseID)
+				detectSleepObj.checkDrowsiness(courseID)
+
+			else:
+				cprint("Some Internal Error occurs with the module,please re-start again" ,'red', attrs=['reverse', 'bold'])
+				exit()
 
 		else:
-			cprint("Some Internal Error occurs with the module,please re-start again" ,'red', attrs=['reverse', 'bold'])
+			cprint("Problem In Loading Student,Contact DataBase Administrator", 'red', attrs=['reverse', 'blink'])
 			exit()
 
 	else:
-		cprint("Problem In Loading Student,Contact DataBase Administrator", 'red', attrs=['reverse', 'blink'])
+		cprint("Input Values is not valid,Start the Module again", 'red', attrs=['reverse', 'blink'])
 		exit()
 
-else:
-	cprint("Input Values is not valid,Start the Module again", 'red', attrs=['reverse', 'blink'])
-	exit()
+if __name__ == "__main__":
+    main()
